@@ -16,3 +16,11 @@ resource tfe_variable system_restore_role {
   workspace_id = tfe_workspace.system_restore.id
   description  = "The role that Terraform Cloud will assume to deploy resources to the system-restore AWS account."
 }
+
+resource tfe_variable system_restore_alias {
+  key          = "account_alias"
+  value        = "${var.account_alias}-system-restore"
+  category     = "terraform"
+  workspace_id = tfe_workspace.system_restore.id
+  description  = "The alias of the AWS system-restore sub-account."
+}

@@ -19,6 +19,7 @@ resource aws_organizations_policy iam {
             "Sid": "ManageUsers",
             "Effect": "Allow",
             "Action": [
+                "iam:CreateUser",
                 "iam:GetUser",
                 "iam:DeleteUser",
                 "iam:DeleteAccessKey",
@@ -40,7 +41,9 @@ resource aws_organizations_policy iam {
                 "iam:GetGroup",
                 "iam:DeleteGroup",
                 "iam:AttachGroupPolicy",
-                "iam:DetachGroupPolicy"
+                "iam:DetachGroupPolicy",
+                "iam:RemoveUserFromGroup",
+                "iam:ListGroupsForUser"
             ],
             "Resource": "*"
         },

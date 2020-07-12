@@ -75,6 +75,7 @@ This project manages the following terraform cloud resources:
  * A workspace that will trigger when terraform is updated in you `system-restore` repository fork.
  * A variable in the `system-restore` workspace defining the role that will be assumed to run terraform from the
    `system-restore` repository.
+* A variable in the `system-restore` workspace defining the alias for the `system-restore` sub-account.
 
 # Initial Setup
 
@@ -109,8 +110,6 @@ This project manages the following terraform cloud resources:
                                      only contain lowercase alphanumeric characters and hyphens.
                 1. `system_restore_email` - Email address of the owner of the system-restore AWS sub-account.  This
                                             must be different from the e-mail address used with your root account.
-                1. `terraform_cloud_token` - The API token created earlier that will allow this workspace to manage
-                                             terraform cloud resources.  This variable should be marked `sensitive`.
                 1. `terraform_cloud_organization` - The name of your Terraform Cloud organization.
                 1. `github_user` - The name of your github account that contains forks of the repositories being used.
                 1. `github_token` - The OAuth token created to give Terraform Cloud access to github.
@@ -118,6 +117,8 @@ This project manages the following terraform cloud resources:
                 1. `AWS_ACCESS_KEY_ID` - The root access key ID generated earlier.
                 1. `AWS_SECRET_ACCESS_KEY` - The root secret access key generated when creating the AWS account.  This
                                              variable should be marked `sensitive`.
+                1. `TFE_TOKEN` - The API token created earlier that will allow this workspace to manage terraform cloud
+                                 resources.  This variable should be marked `sensitive`.
  1. Apply the terraform to setup your AWS account.
     1. In Terraform Cloud, click the `Queue plan` button.
     1. When the plan completes, click the `Confirm & Apply` button.

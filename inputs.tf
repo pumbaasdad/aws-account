@@ -13,11 +13,6 @@ variable system_restore_email {
   description = "Email address of the owner of the system-restore AWS sub-account."
 }
 
-variable terraform_cloud_token {
-  type        = string
-  description = "Token for configuring terraform cloud."
-}
-
 variable terraform_cloud_organization {
   type        = string
   description = "The name of your Terraform Cloud organization."

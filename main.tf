@@ -8,6 +8,4 @@ resource aws_iam_account_alias account_alias {
   account_alias = var.account_alias
 }
 
-provider tfe {
-  token = var.terraform_cloud_token
-}
+provider tfe {}
