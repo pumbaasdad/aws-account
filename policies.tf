@@ -9,6 +9,7 @@ resource aws_iam_policy manage_users {
             "Sid": "ManageUsers",
             "Effect": "Allow",
             "Action": [
+                "iam:CreateUser",
                 "iam:GetUser",
                 "iam:DeleteUser",
                 "iam:DeleteAccessKey",
@@ -41,7 +42,9 @@ resource aws_iam_policy manage_groups {
                 "iam:GetGroup",
                 "iam:DeleteGroup",
                 "iam:AttachGroupPolicy",
-                "iam:DetachGroupPolicy"
+                "iam:DetachGroupPolicy",
+                "iam:RemoveUserFromGroup",
+                "iam:ListGroupsForUser"
             ],
             "Resource": "*"
         }

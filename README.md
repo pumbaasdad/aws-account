@@ -16,8 +16,8 @@ The terraform in this project manages the following resources:
  * The alias for your AWS account
  * IAM Policies
    * `manage-users` - Allow IAM users to be added and deleted from the account.
-   * `manage-groups` - Allow IAM groups to be created and deleted from the account.  Allow policy to be attached to
-                       groups.
+   * `manage-groups` - Allow IAM groups to be created and deleted from the account.  Allow policies/users to be
+                       added/removed to/from groups.
    * `manage-policies` - Allow IAM policies to be created and destroyed in the account.
    * `manage-account` - Allow the account alias to be changed. 
    * `manage-sns` - Allow SNS topics to be created and destroyed.
@@ -28,7 +28,9 @@ The terraform in this project manages the following resources:
    * `administer-system-restore` - Allows the `OrganizationAccountAccessRole` to be assumed in the `system-restore`
                                    sub-account.
  * IAM Groups
-   * `<account alias>-admin` - A group for account administrators.  It contains the following policies:
+   * `terraform` - A group for users that will run terraform.  Although this group does not provide administrator
+                   access, members of this group will be able to grant themselves permission to do anything.  Protect
+                   the credentials of any member of this group accordingly.  It contains the following policies:
      * `manage-users`
      * `manage-groups`
      * `manage-policies`
@@ -37,10 +39,14 @@ The terraform in this project manages the following resources:
      * `manage-cloudwatch`
      * `manage-organizations`
      * `administer-system-restore`
+   * `admin` - A group for account administrators granting users full control over AWS.  It contains the following
+               policies:
+     * `AdministratorAccess`
  * IAM Users
-   * `<account alias>-admin` - The IAM user that will run the terraform after the account has been bootstrapped using
-                               root credentials.  This user belongs to the following groups:
+   * `terraform` - The IAM user that will run the terraform after the account has been bootstrapped using root
+                   credentials.  This user belongs to the following groups:
      * `<account alias>-admin`
+   * `admin` - The IAM user that should be used to manage the AWS account (instead of using root credentials).
  * SNS Topic
    * `notify-me` - A topic that will be used to send you notifications about your account.  You must manually create a
                    subscription to the topic.
@@ -106,13 +112,21 @@ The terraform in this project manages the following resources:
         1. Set Endpoint to your e-mail address.
         1. Click `Create subscription`.
         1. Confirm the subscription e-mail that arrives in your inbox.
- 1. Create access keys for the AWS `<account-alias>-admin` user.
-    1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users).
-    1. Click on the admin user.
+ 1. Create Sign-in credentials for the AWS `admin` user.
+    1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users/admin?section=security_credentials).
+    1. Under `Security credentials`, click `Manage` beside `Console password`.
+        1. Select `Enable`.
+        1. Select `Custom Password`.
+        1. Fill in a password.
+        1. Click `Apply`.
+    1. Optionally (but recommended), set up MFA by clicking `Manage` beside `Assigned MFA device`.
+        1. Follow on screen instructions based on your choice of MFA device.
+ 1. Create access keys for the AWS `terraform` user.
+    1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users/terraform).
     1. Click `Create access key`.
     1. Make note of the `Access key ID` and `Secret access key`.
  1. Update the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables in your Terraform Cloud workspace
-    to be the key's created for the AWS admin user.
+    to be the key's created for the `terraform` user.
  1. Delete your root access keys.
     1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/security_credentials).
     1. Expand `Access keys`.
