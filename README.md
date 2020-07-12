@@ -6,8 +6,8 @@ All attempts have been made to keep the costs associated with this project low a
 possible, however you are ultimately responsible for understanding what is being deployed, and any costs or security
 risks that are associated with those resources.
 
-All instructions provided with this repository assume that you are using [Terraform Cloud](terraform.io).  The terraform
-should work if run manually, however all testing has been done with Terraform Cloud.
+All instructions provided with this repository assume that you are using [Terraform Cloud](https://terraform.io).  The
+terraform should work if run manually, however all testing has been done with Terraform Cloud.
 
 # Managed Resources
 
@@ -137,5 +137,6 @@ Because terraform manages the user that is used to run terraform, attempting to 
 Therefore, to accomplish this, you must first create new root account keys and update Terraform Cloud to use them.
 
 Destroying resources will remove the association between your root account and any sub-accounts, however the
-sub-accounts will still exist.  Make sure you understand how to manage or close those accounts before running destorying
-resources.
+sub-accounts will still exist.  For this reason, the admin user that will typically run this terraform does not have
+permission to create accounts.  Make sure you understand how to manage or close those accounts before running
+`terraform destory`.
