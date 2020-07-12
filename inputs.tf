@@ -12,3 +12,23 @@ variable system_restore_email {
   type        = string
   description = "Email address of the owner of the system-restore AWS sub-account."
 }
+
+variable terraform_cloud_token {
+  type        = string
+  description = "Token for configuring terraform cloud."
+}
+
+variable terraform_cloud_organization {
+  type        = string
+  description = "The name of your Terraform Cloud organization."
+}
+
+variable github_user {
+  type        = string
+  description = "The name of the github account that owns your repository forks."
+}
+
+variable github_token {
+  type        = string
+  description = "A github OAuth token that will allow terraform cloud to access your repository forks."
+}

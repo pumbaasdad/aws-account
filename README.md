@@ -11,7 +11,9 @@ terraform should work if run manually, however all testing has been done with Te
 
 # Managed Resources
 
-The terraform in this project manages the following resources:
+## AWS
+
+The terraform in this project manages the following AWS resources:
 
  * The alias for your AWS account
  * IAM Policies
@@ -66,6 +68,14 @@ The terraform in this project manages the following resources:
                         is detached, it should not be possible to do anything in this account that isn't expressly
                         required by the `system-restore project`. 
 
+## Terraform Cloud
+
+This project manages the following terraform cloud resources:
+
+ * A workspace that will trigger when terraform is updated in you `system-restore` repository fork.
+ * A variable in the `system-restore` workspace defining the role that will be assumed to run terraform from the
+   `system-restore` repository.
+
 # Initial Setup
 
  1. Create an AWS account ([instructions](https://tinyurl.com/y7aq2ky5)).
@@ -76,9 +86,18 @@ The terraform in this project manages the following resources:
     1. Click `Show Access Key` and ake note of the new access key ID and secret access key.
  1. Click `Receive Billing Alerts` [here](https://console.aws.amazon.com/billing/home?#/preferences).
  1. Fork this repository for use with Terraform Cloud.
+ 1. Fork [system-restore](https://github.com/pumbaasdad/system-restore) for use with terraform cloud.    
  1. Setup Terraform Cloud account ([instructions](https://tinyurl.com/y8ph3b5r)).
     1. Create a new account.
     1. Create a new organization.
+    1. Configure GitHub OAuth Access using these [instructions](https://www.terraform.io/docs/cloud/vcs/github.html).
+        1. Note the OAuth Token ID on the final page.
+    1. Create a new API Token
+        1. Click on your avatar and click `User Settings`.
+        1. Click `Tokens`.
+        1. Click `Create an API token`.
+        1. Give the token a description and click `Create API Token`.
+        1. Make note of your token and click `Done`.
     1. Create a workspace.
         1. Give the organization access to your fork of this repository.
         1. Configure Variables
@@ -90,6 +109,11 @@ The terraform in this project manages the following resources:
                                      only contain lowercase alphanumeric characters and hyphens.
                 1. `system_restore_email` - Email address of the owner of the system-restore AWS sub-account.  This
                                             must be different from the e-mail address used with your root account.
+                1. `terraform_cloud_token` - The API token created earlier that will allow this workspace to manage
+                                             terraform cloud resources.  This variable should be marked `sensitive`.
+                1. `terraform_cloud_organization` - The name of your Terraform Cloud organization.
+                1. `github_user` - The name of your github account that contains forks of the repositories being used.
+                1. `github_token` - The OAuth token created to give Terraform Cloud access to github.
             1. Environment Variables
                 1. `AWS_ACCESS_KEY_ID` - The root access key ID generated earlier.
                 1. `AWS_SECRET_ACCESS_KEY` - The root secret access key generated when creating the AWS account.  This
@@ -125,8 +149,11 @@ The terraform in this project manages the following resources:
     1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users/terraform).
     1. Click `Create access key`.
     1. Make note of the `Access key ID` and `Secret access key`.
- 1. Update the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables in your Terraform Cloud workspace
-    to be the key's created for the `terraform` user.
+ 1. Update the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables in your Terraform Cloud 
+    `aws-account` workspace to be the key's created for the `terraform` user.
+ 1. Set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables in your Terraform Cloud 
+    `system-restore` workspace to be the key's created for the `terraform` user.  Make `AWS_SECRET_ACCESS_KEY` as
+    `sensitive`.
  1. Delete your root access keys.
     1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/security_credentials).
     1. Expand `Access keys`.
