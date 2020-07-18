@@ -13,69 +13,109 @@ terraform should work if run manually, however all testing has been done with Te
 
 ## AWS
 
-The terraform in this project manages the following AWS resources:
+This project manages three different terraform root directories, each corresponding to a Terraform Cloud workspace.
 
- * The alias for your AWS account
- * IAM Policies
-   * `manage-users` - Allow IAM users to be added and deleted from the account.
-   * `manage-groups` - Allow IAM groups to be created and deleted from the account.  Allow policies/users to be
-                       added/removed to/from groups.
-   * `manage-policies` - Allow IAM policies to be created and destroyed in the account.
-   * `manage-account` - Allow the account alias to be changed. 
-   * `manage-sns` - Allow SNS topics to be created and destroyed.
-   * `manage-cloudwatch` - Allow metric alarms to be created and destroyed.
-   * `manage-organizations` - Allow organizations and sub-accounts to be created.  Allow organization policies to be
-                              created, attached, updated and destroyed.  This policy does not allow for the deletion of
-                              organizations or accounts.
-   * `administer-system-restore` - Allows the `OrganizationAccountAccessRole` to be assumed in the `system-restore`
-                                   sub-account.
- * IAM Groups
-   * `terraform` - A group for users that will run terraform.  Although this group does not provide administrator
-                   access, members of this group will be able to grant themselves permission to do anything.  Protect
-                   the credentials of any member of this group accordingly.  It contains the following policies:
-     * `manage-users`
-     * `manage-groups`
-     * `manage-policies`
-     * `manage-account`
-     * `manage-sns`
-     * `manage-cloudwatch`
-     * `manage-organizations`
-     * `administer-system-restore`
-   * `admin` - A group for account administrators granting users full control over AWS.  It contains the following
-               policies:
-     * `AdministratorAccess`
+### terraform-cloud
+
+The terraform in the `terraform-cloud` directory manages all Terraform Cloud resources (except the `terraform-cloud`)
+workspace itself.  It creates's the following workspaces and variables:
+
+ * `terraform-permissions` - This workspace is used to give the `terraform` IAM user the permissions it needs to deploy
+                           resources to the root account.
+   * `AWS_ACCESS_KEY_ID` - The ID of the AWS access key the the `terraform-permissions` user will use to manage
+                           resources in the root AWS account.  This value defaults to an empty string.
+   * `AWS_SECRET_ACCESS_KEY` - The AWS secret access key  that the `terraform-permissions` user will use to manage
+                               resources in the AWS root account.  This value defaults to an empty string.
+ * `root` - This workspace is used to deploy resources to your AWS root account.
+   * `change_warning_dollars` - The number of US dollars spent in the AWS account in a month that will trigger a warning
+                                notification to be sent. AWS will evaluate the estimated charges every 6 hours.  This
+                                value defaults to $1.
+   * `account_alias` - The alias of the AWS root account.  This value defaults to an empty string.
+   * `use_system_restore` - If resources related to the `system-restore` repository will be created.  This value
+                            defaults to false.
+   * `system_restore_email` - The e-mail address of the owner of the `system-restore` AWS sub-account.  This variable is
+                              only created if the `use_system_restore` variable is set to true in the `terraform-cloud`
+                              workspace and defaults to an empty string.
+   * `AWS_ACCESS_KEY_ID` - The ID of the AWS access key the the `terraform` user will use to manage resources in the
+                           root AWS account.  This value defaults to an empty string.
+   * `AWS_SECRET_ACCESS_KEY` - The AWS secret access key  that the `terraform` user will use to manage resources in the
+                               AWS root account.  This value defaults to an empty string.
+ * `system-restore` - This workspace is used to manage resources in the `system-restore` AWS sub-account.  It is only
+                      created if the `use_system_restore` variable is set to true.
+   * `account_alias` - The alias of the `system-restore` AWS sub-account.  This value defaults to the value of the
+                       `account_alias` variable in the `terraform-cloud` workspace followed by `-system-restore`.
+   * `role` - The role that will be assumed by the `system-restore-terraform` user to deploy resources to the 
+              `system-restore` AWS sub-account.  This value defaults to an empty string.
+   * `AWS_ACCESS_KEY_ID` - The ID of the AWS access key the the `system-restore-terraform` user will use to manage
+                           resources in the `system-restore` AWS sub-account.  This value defaults to an empty string.
+   * `AWS_SECRET_ACCESS_KEY` - The AWS secret access key  that the `system-restore-terraform` user will use to manage
+                               resources in the `system-restore` AWS sub-account.  This value defaults to an empty
+                               string.
+
+### terraform-permissions
+
+The terraform in the `terraform-permissions` directory manages the resources used by the `terraform` IAM user.  The
+following resources are managed:
+
  * IAM Users
-   * `terraform` - The IAM user that will run the terraform after the account has been bootstrapped using root
-                   credentials.  This user belongs to the following groups:
-     * `<account alias>-admin`
-   * `admin` - The IAM user that should be used to manage the AWS account (instead of using root credentials).
- * SNS Topic
+    * `terraform` - The user that will deploy resources to the root AWS account.
+ * IAM Policies
+    * `terraform-manage-users` - Allow all users except the `terraform` user to be managed.
+    * `terraform-manage-policies` - Allow management of all IAM policies that are not managed by this terraform.
+    * `terraform-manage-sns` - Allow the `notify-me` SNS topic to be managed.
+    * `terraform-manage-cloudwatch` - Allow the `billing-alarm` cloudwatch alarm to be managed.
+    * `terraform-manage-organizations` - Allow AWS organizations to be managed.  Do not allow accounts to be deleted.
+    * `terraform-manage-account` - Allow the AWS account alias to be managed.
+ * IAM Policy Attachments - All policies managed by this terraform are attached to the `terraform` IAM user.
+
+### root
+
+The terraform in the `root` directory manages all resources in the AWS root account not associated with the `terraform`
+user.  It manages the following:
+
+ * IAM Users
+    * `admin` - An IAM user with full control over the account.
+    * `terraform-permissions` - An IAM user that has an inline policy allowing it to manage the `terraform` user and to
+                                manage any IAM policies.
+    * `system-restore-terraform` - An IAM user that will be used to deploy resources to the `system-restore` AWS
+                                   sub-account.  This user is only created when the `use-system-restore` variable is
+                                   set to true.
+ * IAM Policies
+    * `administer-system-restore` - Allow the `OrganizationAccountAccessRole` IAM role to be assumed in the
+                                    `system-restore` AWS sub-account.  This policy is only created when the
+                                    `use_system_restore` variable is set to true.
+    * `deploy-system-restore` - Allow the `terraform` IAM role to be assumed in the `system-restore` AWS sub-account.
+                                This policy is only created when the `use_system_restore` variable is set to true.
+ * IAM Policy Attachments
+    * The following policies are attached to the `admin` user:
+        * `AdministratorAccess`
+        * `administer-system-restore` - This policy is only attached when the `user_system_restore` variable is set to
+                                        true.
+    * The following policies are attached to the `system-restore-terraform` user when the `use_system_restore` variable
+      is set to true:
+        * `deploy-system-restore`
+ * AWS Organizations - An organization is created within your root account with service control policies enabled.
+ * AWS Sub-Accounts
+   * `system-restore` - An account in which the `system-restore` project can be run.  This account will inherit the
+                        default service control policy from the root AWS account, which should be manually disabled for
+                        optimal security.  This sub-account is only created if the `use_system_restore` variable is set
+                        to true.  
+ * Service Control Policies
+    * `manage-iam` - Allows IAM users, IAM policies and account aliases to be managed in a sub-account.
+    * `system-restore` - Allows the reading and writing of encrypted and unencrypted parameters from the SSM parameter
+                         store.  This service control policy is only created if the `use_system_restore` variable is set
+                         to true.
+ * Organization Policy Attachments
+    * The following service control policies are attached to the `system-restore` account if the `use_system_restore`
+      variable is set to true.
+        * `manage-iam`
+        * `system-restore`
+ * SNS Topics
    * `notify-me` - A topic that will be used to send you notifications about your account.  You must manually create a
                    subscription to the topic.
  * Cloudwatch Alarms
    * `billing-alarm` - An alarm that will be triggered when the estimated AWS charges for the month exceed the
                        configured limit.  The `notify-me` SNS topic will be notified when this alarm is triggered.
- * AWS Organization - An organization is created within the account.
- * Service Control Policies
-   * `manage-iam` - A service control policy that will allow IAM users, groups and policies to be created, updated and
-                    deleted.  It allows users to be added to groups, and for policies to be attached or removed from
-                    groups.  It also allows the account alias to be changed.
-   * `system-restore` - Allows policies required by the `system-restore` project.  Specifically, full control over the
-                        SSM parameter store, and the ability to encrypt and decrypt using KMS keys.
- * AWS Sub-Accounts
-   * `system-restore` - An account in which the `system-restore` project can be run.  The `manage-iam` and
-                        `system-restore` service control policies are attached.  If the default service control policy
-                        is detached, it should not be possible to do anything in this account that isn't expressly
-                        required by the `system-restore project`. 
-
-## Terraform Cloud
-
-This project manages the following terraform cloud resources:
-
- * A workspace that will trigger when terraform is updated in you `system-restore` repository fork.
- * A variable in the `system-restore` workspace defining the role that will be assumed to run terraform from the
-   `system-restore` repository.
-* A variable in the `system-restore` workspace defining the alias for the `system-restore` sub-account.
 
 # Initial Setup
 
@@ -84,10 +124,9 @@ This project manages the following terraform cloud resources:
     1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/security_credentials).
     1. Expand `Access keys`.
     1. Click `Create New Access Key`.
-    1. Click `Show Access Key` and ake note of the new access key ID and secret access key.
+    1. Click `Show Access Key` and take note of the new access key ID and secret access key.
  1. Click `Receive Billing Alerts` [here](https://console.aws.amazon.com/billing/home?#/preferences).
- 1. Fork this repository for use with Terraform Cloud.
- 1. Fork [system-restore](https://github.com/pumbaasdad/system-restore) for use with terraform cloud.    
+ 1. Fork this repository for use with Terraform Cloud.   
  1. Setup Terraform Cloud account ([instructions](https://tinyurl.com/y8ph3b5r)).
     1. Create a new account.
     1. Create a new organization.
@@ -103,31 +142,50 @@ This project manages the following terraform cloud resources:
         1. Give the organization access to your fork of this repository.
         1. Configure Variables
             1. Terraform Variables
-                1. `charge_warning_dollars` - The number of Canadian dollars spent in the AWS account in a month that
-                                              will trigger a warning notification to be sent.  AWS will evaluate the
-                                              estimated charges every 6 hours.
                 1. `account_alias` - An alias for your AWS account ID.  It must start with an alphanumeric character and
-                                     only contain lowercase alphanumeric characters and hyphens.
-                1. `system_restore_email` - Email address of the owner of the system-restore AWS sub-account.  This
-                                            must be different from the e-mail address used with your root account.
+                                     only contain lowercase alphanumeric characters and hyphens.            
                 1. `terraform_cloud_organization` - The name of your Terraform Cloud organization.
                 1. `github_user` - The name of your github account that contains forks of the repositories being used.
                 1. `github_token` - The OAuth token created to give Terraform Cloud access to github.
             1. Environment Variables
-                1. `AWS_ACCESS_KEY_ID` - The root access key ID generated earlier.
-                1. `AWS_SECRET_ACCESS_KEY` - The root secret access key generated when creating the AWS account.  This
-                                             variable should be marked `sensitive`.
                 1. `TFE_TOKEN` - The API token created earlier that will allow this workspace to manage terraform cloud
                                  resources.  This variable should be marked `sensitive`.
- 1. Apply the terraform to setup your AWS account.
+ 1. Apply the terraform to setup your Terraform Cloud workspaces.
     1. In Terraform Cloud, click the `Queue plan` button.
     1. When the plan completes, click the `Confirm & Apply` button.
+ 1. Deploy the `terraform-permissions` workspace
+    1. From the workspaces page in terraform cloud, select `terraform-permissions`.
+    1. Click `Variables`
+    1. Configure variables
+        1. Environment Variables
+            1. `AWS_ACCESS_KEY_ID` - The ID of the root AWS access key created earlier.
+            1. `AWS_SECRET_ACCESS_KEY` - The root AWS secret access key created earlier.
+    1. Click the `Queue plan button`.
+    1. When the plan completes, click the `Confirm & Apply` button.
+ 1. Delete your root access keys.
+    1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/security_credentials).
+    1. Expand `Access keys`.
+    1. Click `Delete` next to your access key.
+    1. Confirm by clicking `Yes`.
+ 1. Create AWS access keys for the `terraform` user
+    1. Navigate
+       [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users/terraform?section=security_credentials).
+    1. Expand `Access keys`.
+    1. Click `Create New Access Key`.
+    1. Click `Show Access Key` and take note of the new access key ID and secret access key.
+ 1. Deploy the `root` workspace
+    1. From the workspaces page in terraform cloud, select `root`.
+    1. Click `Variables`
+    1. Configure variables
+        1. `charge_warning_dollars` - The number of US dollars spent in the AWS account in a month that will trigger a
+                                      warning notification to be sent. AWS will evaluate the estimated charges every 6
+                                      hours.
+        1. Environment Variables
+            1. `AWS_ACCESS_KEY_ID` - The ID of the `terraform` user's AWS access key created earlier.
+            1. `AWS_SECRET_ACCESS_KEY` - The AWS secret access key of the `terraform` user.
+    1. Click the `Queue plan button`.
+    1. When the plan completes, click the `Confirm & Apply` button. 
  1. Approve the AWS Organizations email verification request that AWS sends you.
- 1. Detach the default Service Control Policy on the `system-restore` AWS account. 
-    1. Navigate [here](https://console.aws.amazon.com/organizations/home?region=us-east-1#/accounts)
-    1. Select `system-restore`.
-    1. Click `Service control policies`.
-    1. CLick `Detach` beside `FullAWSAccess`.
  1. Subscribe to AWS billing alert alarms.
     1. Navigate [here](https://console.aws.amazon.com/sns/v3/home?region=us-east-1#/topics)
     1. Click `notify-me`.
@@ -138,7 +196,8 @@ This project manages the following terraform cloud resources:
         1. Click `Create subscription`.
         1. Confirm the subscription e-mail that arrives in your inbox.
  1. Create Sign-in credentials for the AWS `admin` user.
-    1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users/admin?section=security_credentials).
+    1. Navigate
+       [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users/admin?section=security_credentials).
     1. Under `Security credentials`, click `Manage` beside `Console password`.
         1. Select `Enable`.
         1. Select `Custom Password`.
@@ -146,20 +205,12 @@ This project manages the following terraform cloud resources:
         1. Click `Apply`.
     1. Optionally (but recommended), set up MFA by clicking `Manage` beside `Assigned MFA device`.
         1. Follow on screen instructions based on your choice of MFA device.
- 1. Create access keys for the AWS `terraform` user.
-    1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users/terraform).
+ 1. Create access keys for the AWS `terraform-permissions` user.
+    1. Navigate[here](https://console.aws.amazon.com/iam/home?region=us-east-1#/users/terraform-permissions?section=security_credentials).
     1. Click `Create access key`.
     1. Make note of the `Access key ID` and `Secret access key`.
  1. Update the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables in your Terraform Cloud 
-    `aws-account` workspace to be the key's created for the `terraform` user.
- 1. Set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables in your Terraform Cloud 
-    `system-restore` workspace to be the key's created for the `terraform` user.  Make `AWS_SECRET_ACCESS_KEY` as
-    `sensitive`.
- 1. Delete your root access keys.
-    1. Navigate [here](https://console.aws.amazon.com/iam/home?region=us-east-1#/security_credentials).
-    1. Expand `Access keys`.
-    1. Click `Delete` next to your access key.
-    1. Confirm by clicking `Yes`.
+    `terraform-permissions` workspace to be the key's created for the `terraform-permissions` user.
 
 # Keeping Account Up To Date
 
@@ -167,18 +218,27 @@ Every time changes are delivered to the main branch of your fork, Terraform Clou
 must log in to Terraform Cloud and Confirm and Apply the changes.  You may also choose to automatically apply successful
 plans.
 
-Because the admin IAM user (that is being used by Terraform Cloud) has restricted permissions, if the changes delivered
-to your main branch contain resource changes, and permission updates required to apply those changes, terraform may
-fail to update your resources.  In this case, the permissions should have been updated.  Rerunning and applying the plan
-should then update the resources.
+Because changes in one workspace may be required before another workspace functions properly, it is likely that you will
+see plans fail.  This is ok.  After you successfully deploy the workspaces that were successfully planned, re-run the
+failed plans and they should succeed.
 
 # Destroying Resources
 
-Because terraform manages the user that is used to run terraform, attempting to use Terraform Cloud to run
-`terraform destory` will fail (the admin user will lose permissions to delete users before it deletes itself).
-Therefore, to accomplish this, you must first create new root account keys and update Terraform Cloud to use them.
+It should be possible to destroy the `terraform-cloud` workspace at any time.
 
-Destroying resources will remove the association between your root account and any sub-accounts, however the
-sub-accounts will still exist.  For this reason, the admin user that will typically run this terraform does not have
-permission to create accounts.  Make sure you understand how to manage or close those accounts before running
-`terraform destory`.
+The `root` workspace can be destroyed as long as the `terraform-permissions` workspace is deployed.  Destroying this
+workspace will require you to switch the `terraform-permissions` repository to use root access keys to do anything.
+Deleting a sub-account from an organization won't actually delete the sub-account.  For this reason, the `terraform`
+user does not have permission to delete any sub-accounts that it has created.  If you want to do this, you will need to
+update the AWS access keys in the `root` workspace to be root access keys.  Make sure you understand how to manage or
+close any sub-accounts before running `terraform-destory`.
+
+The `terraform-permissions` workspace can be destroyed as long as the `root` workspace is deployed.  Destroying it will
+require switching the `root` workspace to use root access keys to do anything.
+
+The `system-restore` workspace can be destroyed as long as the `root` workspace is deployed.
+
+If you want to destroy a workspace that depends upon a workspace that has already been destroyed, you can switch the
+AWS access keys of the workspace to destroy to root access keys.
+
+Before using root access keys, make sure you understand the security risks.
