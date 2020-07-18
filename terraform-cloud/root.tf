@@ -74,3 +74,13 @@ resource tfe_variable use_system_restore {
   workspace_id = tfe_workspace.root.id
   description  = "If resources should be created/managed for the system-restore sub-account"
 }
+
+resource tfe_run_trigger run_root_after_terraform_cloud {
+  workspace_id  = tfe_workspace.root.id
+  sourceable_id = data.tfe_workspace.terraform_cloud.id
+}
+
+resource tfe_run_trigger run_root_after_terraform_permissions {
+  workspace_id  = tfe_workspace.root.id
+  sourceable_id = tfe_workspace.terraform_permissions.id
+}

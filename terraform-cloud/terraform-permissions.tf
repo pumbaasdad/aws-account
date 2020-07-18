@@ -33,3 +33,8 @@ resource tfe_variable terraform_permissions_aws_secret_access_key {
     ignore_changes = [value]
   }
 }
+
+resource tfe_run_trigger run_terraform_permissions_after_terraform_cloud {
+  workspace_id  = tfe_workspace.terraform_permissions.id
+  sourceable_id = data.tfe_workspace.terraform_cloud.id
+}

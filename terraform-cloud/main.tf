@@ -19,3 +19,8 @@ variable github_token {
   type        = string
   description = "A github OAuth token that will allow terraform cloud to access your repository forks."
 }
+
+data tfe_workspace terraform_cloud {
+  name         = "terraform-cloud"
+  organization = var.terraform_cloud_organization
+}

@@ -52,6 +52,18 @@ workspace itself.  It creates's the following workspaces and variables:
                                resources in the `system-restore` AWS sub-account.  This value defaults to an empty
                                string.
 
+The following run triggers are also managed:
+
+  * `terraform-permissions` will be automatically planned after the following workspaces are successfully deployed:
+    * `terraform-cloud`
+  * `root` will be automatically planned after the following workspaces are successfully deployed:
+    * `terraform-cloud`
+    * `terraform-permissions`
+* If the `use_system_restore` variable is set to true, `system_restore` will be automatically planned after the
+  following workspaces are successfully deployed:
+    * `terraform-cloud`
+    * `root`        
+
 ### terraform-permissions
 
 The terraform in the `terraform-permissions` directory manages the resources used by the `terraform` IAM user.  The
@@ -140,6 +152,8 @@ user.  It manages the following:
         1. Make note of your token and click `Done`.
     1. Create a workspace.
         1. Give the organization access to your fork of this repository.
+        1. Name the workspace `terraform-cloud`.
+        1. Under `Advanced options`, set `Terraform Working Directory` to `terraform-cloud`.
         1. Configure Variables
             1. Terraform Variables
                 1. `account_alias` - An alias for your AWS account ID.  It must start with an alphanumeric character and
@@ -219,8 +233,12 @@ must log in to Terraform Cloud and Confirm and Apply the changes.  You may also 
 plans.
 
 Because changes in one workspace may be required before another workspace functions properly, it is likely that you will
-see plans fail.  This is ok.  After you successfully deploy the workspaces that were successfully planned, re-run the
-failed plans and they should succeed.
+see plans fail.  This is ok.  After you successfully deploy the workspaces that were successfully planned, any
+workspaces that depend on that repository will be automatically re-planned.  Because Terraform Cloud run triggers cannot
+create a loop, the `terraform-permissions` workspace will not be automatically planned after the `root` workspace is
+deployed.  If the `root` workspace has a change that is required by `terraform-permissions`, you will have to queue the
+`terraform-permissions` plan manually.  Due to the design of the system, this is less likely to happen than a change in
+the `terraform-permissions` workspace being needed by the `root` workspace. 
 
 # Destroying Resources
 

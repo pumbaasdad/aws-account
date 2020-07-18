@@ -41,3 +41,15 @@ resource tfe_variable system_restore_alias {
   workspace_id = tfe_workspace.system_restore[count.index].id
   description  = "The alias of the AWS system-restore sub-account."
 }
+
+resource tfe_run_trigger run_system_restore_after_terraform_cloud {
+  count         = local.system_restore_count
+  workspace_id  = tfe_workspace.system_restore[count.index].id
+  sourceable_id = data.tfe_workspace.terraform_cloud.id
+}
+
+resource tfe_run_trigger run_system_restore_after_root {
+  count         = local.system_restore_count
+  workspace_id  = tfe_workspace.system_restore[count.index].id
+  sourceable_id = tfe_workspace.root.id
+}
