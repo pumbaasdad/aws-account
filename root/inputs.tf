@@ -8,7 +8,13 @@ variable charge_warning_dollars {
   description = "The number of US dollars spent in the AWS account in a month that will trigger a warning notification to be sent.  AWS will evaluate the estimated charges every 6 hours."
 }
 
+variable use_system_restore {
+  type        = bool
+  description = "If resources should be created/managed for the system-restore AWS sub-account."
+}
+
 variable system_restore_email {
   type        = string
+  default     = null
   description = "Email address of the owner of the system-restore AWS sub-account."
 }

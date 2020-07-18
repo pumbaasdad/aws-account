@@ -1,9 +1,15 @@
+locals {
+  system_restore_count = var.use_system_restore ? 1 : 0
+}
+
 resource aws_organizations_account system_restore {
-  name                       = "system-restore"
-  email                      = var.system_restore_email
+  count = local.system_restore_count
+  name  = "system-restore"
+  email = var.system_restore_email
 }
 
 resource aws_organizations_policy system_restore {
+  count   = local.system_restore_count
   name    = "system-restore"
   content = <<EOF
 {
@@ -35,19 +41,20 @@ EOF
 }
 
 locals {
-  system_restore_organization_policy_ids = [
+  system_restore_organization_policy_ids = var.use_system_restore ? [
     aws_organizations_policy.manage_iam.id,
-    aws_organizations_policy.system_restore.id,
-  ]
+    aws_organizations_policy.system_restore[0].id,
+  ] : []
 }
 
 resource aws_organizations_policy_attachment system_restore {
   count     = length(local.system_restore_organization_policy_ids)
   policy_id = element(local.system_restore_organization_policy_ids, count.index)
-  target_id = aws_organizations_account.system_restore.id
+  target_id = aws_organizations_account.system_restore[0].id
 }
 
 resource aws_iam_policy administer_system_restore {
+  count       = local.system_restore_count
   name        = "administer-system-restore"
   description = "Permissions required to assume the administrator role in the system-restore account."
   policy      = <<EOF
@@ -58,7 +65,7 @@ resource aws_iam_policy administer_system_restore {
             "Sid": "AdministerSystemRestore",
             "Effect": "Allow",
             "Action": "sts:AssumeRole",
-            "Resource": "arn:aws:iam::${aws_organizations_account.system_restore.id}:role/OrganizationAccountAccessRole"
+            "Resource": "arn:aws:iam::${aws_organizations_account.system_restore[count.index].id}:role/OrganizationAccountAccessRole"
         }
     ]
 }
@@ -66,6 +73,7 @@ EOF
 }
 
 resource aws_iam_policy deploy_system_restore {
+  count       = local.system_restore_count
   name        = "deploy-system-restore"
   description = "Permissions required to assume the terraform role in the system-restore account."
   policy      = <<EOF
@@ -76,7 +84,7 @@ resource aws_iam_policy deploy_system_restore {
             "Sid": "DeploySystemRestore",
             "Effect": "Allow",
             "Action": "sts:AssumeRole",
-            "Resource": "arn:aws:iam::${aws_organizations_account.system_restore.id}:role/terraform"
+            "Resource": "arn:aws:iam::${aws_organizations_account.system_restore[count.index].id}:role/terraform"
         }
     ]
 }
@@ -84,11 +92,13 @@ EOF
 }
 
 resource aws_iam_user system_restore_terraform {
+  count         = local.system_restore_count
   name          = "system-restore-terraform"
   force_destroy = true
 }
 
 resource aws_iam_user_policy_attachment system_restore_terraform {
-  policy_arn = aws_iam_policy.deploy_system_restore.arn
-  user       = aws_iam_user.system_restore_terraform.name
+  count      = local.system_restore_count
+  policy_arn = aws_iam_policy.deploy_system_restore[count.index].arn
+  user       = aws_iam_user.system_restore_terraform[count.index].name
 }

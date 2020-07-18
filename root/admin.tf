@@ -3,15 +3,13 @@ resource aws_iam_user admin {
   force_destroy = true
 }
 
-locals {
-  admin_policy_arns = [
-    "arn:aws:iam::aws:policy/AdministratorAccess",
-    aws_iam_policy.administer_system_restore.arn
-  ]
+resource aws_iam_user_policy_attachment admin_admin_policy_attachment {
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  user       = aws_iam_user.admin.name
 }
 
-resource aws_iam_user_policy_attachment admin {
-  count      = length(local.admin_policy_arns)
-  policy_arn = element(local.admin_policy_arns, count.index)
+resource aws_iam_user_policy_attachment admin_administer_system_restore_policy_attachment {
+  count      = local.system_restore_count
+  policy_arn = aws_iam_policy.administer_system_restore[count.index].arn
   user       = aws_iam_user.admin.name
 }
