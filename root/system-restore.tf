@@ -90,6 +90,24 @@ resource aws_iam_policy deploy_system_restore {
 }
 EOF
 }
+resource aws_iam_policy deploy_system_restore_deploy_permissions {
+  count       = local.system_restore_count
+  name        = "deploy-system-restore-deploy-permissions"
+  description = "Permissions required to assume the terraform-permissions role in the system-restore account."
+  policy      = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DeploySystemRestoreDeployPermissions",
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::${aws_organizations_account.system_restore[count.index].id}:role/terraform-permissions"
+        }
+    ]
+}
+EOF
+}
 
 resource aws_iam_user system_restore_terraform {
   count         = local.system_restore_count
@@ -101,4 +119,16 @@ resource aws_iam_user_policy_attachment system_restore_terraform {
   count      = local.system_restore_count
   policy_arn = aws_iam_policy.deploy_system_restore[count.index].arn
   user       = aws_iam_user.system_restore_terraform[count.index].name
+}
+
+resource aws_iam_user system_restore_terraform_permissions {
+  count         = local.system_restore_count
+  name          = "system-restore-terraform-permissions"
+  force_destroy = true
+}
+
+resource aws_iam_user_policy_attachment system_restore_terraform_permissions {
+  count      = local.system_restore_count
+  policy_arn = aws_iam_policy.deploy_system_restore_deploy_permissions[count.index].arn
+  user       = aws_iam_user.system_restore_terraform_permissions[count.index].name
 }

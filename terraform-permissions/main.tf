@@ -28,15 +28,12 @@ resource aws_iam_policy terraform_manage_users {
                 "iam:ListSSHPublicKeys",
                 "iam:ListUserPolicies",
                 "iam:GetUser",
-                "iam:GetUserPolicy",
                 "iam:AttachUserPolicy",
                 "iam:CreateUser",
                 "iam:DeleteAccessKey",
                 "iam:DeleteLoginProfile",
                 "iam:DeleteUser",
-                "iam:DeleteUserPolicy",
-                "iam:DetachUserPolicy",
-                "iam:PutUserPolicy"
+                "iam:DetachUserPolicy"
             ],
             "NotResource": [
               "${aws_iam_user.terraform.arn}"
@@ -55,8 +52,12 @@ resource aws_iam_policy terraform_manage_users {
 EOF
 }
 
+locals {
+  terraform_manage_policies_name = "terraform-manage-policies"
+}
+
 resource aws_iam_policy terraform_manage_policies {
-  name        = "terraform-manage-policies"
+  name        = local.terraform_manage_policies_name
   description = "Permissions required for the terraform IAM user to manage IAM policies."
   policy      = <<EOF
 {
@@ -74,12 +75,7 @@ resource aws_iam_policy terraform_manage_policies {
                 "iam:DeletePolicy",
                 "iam:DeletePolicyVersion"
             ],
-            "NotResource": [
-                "${aws_iam_policy.terraform_manage_users.arn}",
-                "arn:aws:sns:us-east-1:${data.aws_caller_identity.current.account_id}:policy/terraform-manage-policies",
-                "${aws_iam_policy.terraform_manage_sns.arn}",
-                "${aws_iam_policy.terraform_manage_cloudwatch.arn}"
-            ]
+            "NotResource": ${jsonencode(local.terraform_policy_arns)}
         }
     ]
 }
@@ -174,7 +170,7 @@ resource aws_iam_policy terraform_manage_organizations {
 EOF
 }
 
-resource aws_iam_policy terraform-manage_account {
+resource aws_iam_policy terraform_manage_account {
   name        = "terraform-manage-account"
   description = "Permissions required for the terraform IAM user to manage the AWS account."
   policy      = <<EOF
@@ -199,11 +195,11 @@ EOF
 locals {
   terraform_policy_arns = [
     aws_iam_policy.terraform_manage_cloudwatch.arn,
-    aws_iam_policy.terraform_manage_policies.arn,
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${local.terraform_manage_policies_name}",
     aws_iam_policy.terraform_manage_sns.arn,
     aws_iam_policy.terraform_manage_users.arn,
     aws_iam_policy.terraform_manage_organizations.arn,
-    aws_iam_policy.terraform-manage_account.arn
+    aws_iam_policy.terraform_manage_account.arn
   ]
 }
 

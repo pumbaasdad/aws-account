@@ -51,6 +51,17 @@ workspace itself.  It creates's the following workspaces and variables:
    * `AWS_SECRET_ACCESS_KEY` - The AWS secret access key  that the `system-restore-terraform` user will use to manage
                                resources in the `system-restore` AWS sub-account.  This value defaults to an empty
                                string.
+ * `system-restore-terraform-permissions` - This workspace is used to manage terraform permissions in the
+                                            `system-restore` AWS sub-account.  It is only created if the
+                                            `use_system_restore` variable is set to true.
+   * `role` - The role that will be assumed by the `system-restore-terraform-permissions` user to deploy resources to 
+              deploy `system-restore` AWS sub-account.  This value defaults to an empty string.
+   * `AWS_ACCESS_KEY_ID` - The ID of the AWS access key the the `system-restore-terraform-permissions` user will use to
+                           manage resources in the `system-restore` AWS sub-account.  This value defaults to an empty
+                           string.
+   * `AWS_SECRET_ACCESS_KEY` - The AWS secret access key  that the `system-restore-terraform-permissions` user will use
+                               to manage resources in the `system-restore` AWS sub-account.  This value defaults to an
+                               empty string.
 
 The following run triggers are also managed:
 
@@ -59,8 +70,13 @@ The following run triggers are also managed:
   * `root` will be automatically planned after the following workspaces are successfully deployed:
     * `terraform-cloud`
     * `terraform-permissions`
-* If the `use_system_restore` variable is set to true, `system_restore` will be automatically planned after the
-  following workspaces are successfully deployed:
+  * If the `use_system_restore` variable is set to true, `system-restore` will be automatically planned after the
+    following workspaces are successfully deployed:
+    * `terraform-cloud`
+    * `root`
+    * `system-restore-terraform-permissions`
+  * If the `use_system_restore` variable is set to true, `system-restore-terraform-permissions` will be automatically
+    planned after the following workspaces are successfully deployed:
     * `terraform-cloud`
     * `root`        
 
@@ -87,25 +103,39 @@ user.  It manages the following:
 
  * IAM Users
     * `admin` - An IAM user with full control over the account.
-    * `terraform-permissions` - An IAM user that has an inline policy allowing it to manage the `terraform` user and to
-                                manage any IAM policies.
+    * `terraform-permissions` - An IAM user for managing the `terraform` user and its policies.
     * `system-restore-terraform` - An IAM user that will be used to deploy resources to the `system-restore` AWS
                                    sub-account.  This user is only created when the `use-system-restore` variable is
                                    set to true.
+    * `system-restore-terraform-permissions` - An IAM user that will be used to manage the permissions of the
+                                               `terraform` IAM role in the `system-restore` AWS sub-account.  This user
+                                               is only created when the `use-system-restore` variable is set to true.
  * IAM Policies
     * `administer-system-restore` - Allow the `OrganizationAccountAccessRole` IAM role to be assumed in the
                                     `system-restore` AWS sub-account.  This policy is only created when the
                                     `use_system_restore` variable is set to true.
     * `deploy-system-restore` - Allow the `terraform` IAM role to be assumed in the `system-restore` AWS sub-account.
                                 This policy is only created when the `use_system_restore` variable is set to true.
+    * `deploy-system-restore-deploy-permissions` - Allow the `terraform-permissions` IAM role to be assumed in the
+                                                   `system-restore` AWS sub-account.  This policy is only created when
+                                                   the `use_system_restore` variable is set to true.
+    * `manage-terraform-user` - Allow the `terraform` user to be managed.
+    * `terraform-permissions-manage-policies` - Allow all policies except those attached to the `terraform-policies`
+                                                IAM User to be managed.
  * IAM Policy Attachments
     * The following policies are attached to the `admin` user:
         * `AdministratorAccess`
         * `administer-system-restore` - This policy is only attached when the `user_system_restore` variable is set to
                                         true.
+    * The following policies are attached to the `terraform-permissions` user:
+        * `manage-terraform-user`
+        * `terraform-permissions-manage-policies`
     * The following policies are attached to the `system-restore-terraform` user when the `use_system_restore` variable
       is set to true:
         * `deploy-system-restore`
+    * The following policies are attached to the `system-restore-terraform-permissions` user when the
+      `use_system_restore` variable is set to true:
+        * `deploy-system-restore-deploy-permissions`
  * AWS Organizations - An organization is created within your root account with service control policies enabled.
  * AWS Sub-Accounts
    * `system-restore` - An account in which the `system-restore` project can be run.  This account will inherit the
@@ -113,7 +143,8 @@ user.  It manages the following:
                         optimal security.  This sub-account is only created if the `use_system_restore` variable is set
                         to true.  
  * Service Control Policies
-    * `manage-iam` - Allows IAM users, IAM policies and account aliases to be managed in a sub-account.
+    * `manage-iam` - Allows IAM users, groups, policies and roles and account aliases to be managed in a sub-account.
+                     It also allows the organization to be described.
     * `system-restore` - Allows the reading and writing of encrypted and unencrypted parameters from the SSM parameter
                          store.  This service control policy is only created if the `use_system_restore` variable is set
                          to true.
@@ -198,7 +229,7 @@ user.  It manages the following:
             1. `AWS_ACCESS_KEY_ID` - The ID of the `terraform` user's AWS access key created earlier.
             1. `AWS_SECRET_ACCESS_KEY` - The AWS secret access key of the `terraform` user.
     1. Click the `Queue plan button`.
-    1. When the plan completes, click the `Confirm & Apply` button. 
+    1. When the plan completes, click the `Confirm & Apply` button.
  1. Approve the AWS Organizations email verification request that AWS sends you.
  1. Subscribe to AWS billing alert alarms.
     1. Navigate [here](https://console.aws.amazon.com/sns/v3/home?region=us-east-1#/topics)
@@ -235,10 +266,10 @@ plans.
 Because changes in one workspace may be required before another workspace functions properly, it is likely that you will
 see plans fail.  This is ok.  After you successfully deploy the workspaces that were successfully planned, any
 workspaces that depend on that repository will be automatically re-planned.  Because Terraform Cloud run triggers cannot
-create a loop, the `terraform-permissions` workspace will not be automatically planned after the `root` workspace is
-deployed.  If the `root` workspace has a change that is required by `terraform-permissions`, you will have to queue the
-`terraform-permissions` plan manually.  Due to the design of the system, this is less likely to happen than a change in
-the `terraform-permissions` workspace being needed by the `root` workspace. 
+create a loop, the following dependencies cannot be triggered automatically and must be manually planned:
+
+ * `terraform-permissions` after a change to `root`
+ * `system-restore-terraform-permissions` after a change to `system-restore` 
 
 # Destroying Resources
 
