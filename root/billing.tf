@@ -12,6 +12,10 @@ resource aws_cloudwatch_metric_alarm billing_alarm {
   statistic           = "Maximum"
   threshold           = var.charge_warning_dollars
   alarm_actions       = [aws_sns_topic.notify_me.arn]
-  alarm_description   = "Send an e-mail if estimated charges exceed ${var.charge_warning_dollars} CAD in a month."
+  alarm_description   = "Send an e-mail if estimated charges exceed ${var.charge_warning_dollars} USD in a month."
   datapoints_to_alarm = 1
+
+  dimensions = {
+    Currency = "USD"
+  }
 }
